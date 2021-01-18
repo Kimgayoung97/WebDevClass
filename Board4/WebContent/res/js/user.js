@@ -17,3 +17,19 @@ function delProfileImg() {
 		console.err('err 발생 : ' + err);
 	})
 }
+
+
+function chkPw(){
+	var frm = document.querySelector('#frm');
+	if(frm.current_pw.value == ''){
+		alert('기존 비밀번호를 작성해 주세요.');
+		frm.current_pw.focus();
+		return false;
+	} else if(frm.user_pw.value == ''){
+		alert('변경 비밀번호를 작성해 주세요');
+	} else if(frm.user_pw.value != frm.chk_user_pw){
+		alert('변경/ 확인 비밀번호를 확인해 주세요');
+		frm.user_pw.focus();
+		return false;
+	}
+}
