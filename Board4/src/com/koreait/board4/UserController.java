@@ -1,8 +1,10 @@
 package com.koreait.board4;
 
+import java.io.File;
 import java.io.IOException;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Enumeration;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -14,6 +16,10 @@ import com.koreait.board4.common.Utils;
 import com.koreait.board4.db.SQLInterUpdate;
 import com.koreait.board4.db.UserDAO;
 import com.koreait.board4.model.UserModel;
+import com.oreilly.servlet.MultipartRequest;
+import com.oreilly.servlet.multipart.DefaultFileRenamePolicy;
+
+
 
 public class UserController {
 	//로그인 페이지 띄우기(get)
@@ -97,7 +103,99 @@ public class UserController {
 		hs.invalidate();
 		response.sendRedirect("/user/login.korea");
 	}
-}
+	//프로필 화면
+		public void profile(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+			UserModel param = new UserModel();
+			param.setI_user(SecurityUtils.getLoingUserPk(request));
+			request.setAttribute("data", UserDAO.selUser(param));
+			request.setAttribute("jsList", new String[] {"axios.min", "user"});
+			Utils.forwardTemp("프로필", "temp/basic_temp", "user/profile", request, response);
+		}
+		
+		//이미지 업로드 proc
+		public void profileUpload(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+			int i_user = SecurityUtils.getLoingUserPk(request);
+			String savePath = request.getServletContext().getRealPath("/res/img/" + i_user);
+			System.out.println("savePath : " + savePath);
+			File folder = new File(savePath);
+			/*
+			//파일을 삭제한다면....
+			File imgFile = new File(savePath + "/파일명.jpg");
+			if(imgFile.exists()) {
+				imgFile.delete();
+			}
+			*/
+			if(folder.exists()) { //기존 이미지가 있었다면 삭제처리
+				File[] folder_list = folder.listFiles(); 
+				for(File file : folder_list) {
+					if(file.isFile()) {
+						file.delete();
+					}
+				}
+				folder.delete();
+			}		
+			folder.mkdirs();
+			
+			int sizeLimit = 104_857_600; //100mb제한	
+			MultipartRequest multi = new MultipartRequest(request, savePath, sizeLimit, "utf-8", new DefaultFileRenamePolicy());
+			
+			Enumeration files = multi.getFileNames();
+			if(files.hasMoreElements()) {
+				String eleName = (String)files.nextElement();			
+								
+				String fileNm = multi.getFilesystemName(eleName);
+				System.out.println("fileNm : " + fileNm);	
+				
+				String sql = "UPDATE t_user SET profile_img = ?"
+						+ " WHERE i_user = ?";
+				
+				UserDAO.executeUpdate(sql, new SQLInterUpdate() {
+					@Override
+					public void proc(PreparedStatement ps) throws SQLException {
+						ps.setString(1, fileNm);
+						ps.setInt(2, i_user);
+					}					
+				});
+			}
+			
+			response.sendRedirect("/user/profile.korea");
+		}
+		
+		
+		public void delProfileImg(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+			int i_user = SecurityUtils.getLoingUserPk(request);
+			String savePath = request.getServletContext().getRealPath("/res/img/" + i_user);
+			
+			File folder = new File(savePath);		
+			if(folder.exists()) { //기존 이미지 삭제처리
+				File[] folder_list = folder.listFiles(); 
+				for(File file : folder_list) {
+					if(file.isFile()) {
+						file.delete();
+					}
+				}
+				folder.delete();
+			}
+			String sql = "UPDATE t_user SET profile_img = null "
+					+ " WHERE i_user = ?";
+			
+			UserDAO.executeUpdate(sql, new SQLInterUpdate() {
+				@Override
+				public void proc(PreparedStatement ps) throws SQLException {				
+					ps.setInt(1, i_user);
+				}					
+			});		
+			String result = "{\"result\":1}";
+			response.setContentType("application/json");
+			response.getWriter().print(result);
+		}
+		
+		public void changePwProc(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+			
+		}
+	}
+
+
 
 
 
